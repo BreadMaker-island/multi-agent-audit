@@ -1,0 +1,27 @@
+# Systemd 服务文件
+# 部署位置: /etc/systemd/system/multi-agent-audit.service
+# 命令:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable multi-agent-audit
+#   sudo systemctl start multi-agent-audit
+
+[Unit]
+Description=Multi-Agent Code Audit System
+After=network.target
+
+[Service]
+Type=notify
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/multi-agent-audit
+Environment="DJANGO_DEBUG=False"
+Environment="DJANGO_SECRET_KEY=your-secret-key-change-this"
+Environment="DJANGO_ALLOWED_HOSTS=your-server-ip,your-domain.com"
+Environment="LLM_API_KEY=your-mimo-api-key"
+ExecStart=/opt/multi-agent-audit/venv/bin/gunicorn config.wsgi:application -c gunicorn.conf.py
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

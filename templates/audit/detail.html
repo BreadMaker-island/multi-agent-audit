@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}审计详情 - {{ code_file.file_path }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <!-- 文件信息头部 -->
+        <div class="card-custom mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="bi bi-file-earmark-code"></i>
+                    <strong>{{ code_file.file_path }}</strong>
+                    <span class="badge bg-dark ms-2">{{ code_file.language }}</span>
+                    <span class="badge bg-secondary ms-1">{{ code_file.line_count }} 行</span>
+                </div>
+                <div>
+                    <a href="{% url 'export-pdf' code_file.id %}" class="btn btn-sm btn-outline-light me-2">
+                        <i class="bi bi-file-earmark-pdf"></i> 导出 PDF
+                    </a>
+                    <a href="{% url 'submit' %}" class="btn btn-sm btn-primary-custom">
+                        <i class="bi bi-plus-lg"></i> 新建审计
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <small class="text-secondary">所属项目</small>
+                        <div>{{ code_file.project.name }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-secondary">发现问题</small>
+                        <div style="color: var(--warning); font-weight: 700; font-size: 1.5rem">{{ records|length }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-secondary">严重程度分布</small>
+                        <div>
+                            {% for s in severity_summary %}
+                            <span class="badge badge-{{ s.severity }} me-1">{{ s.get_severity_display }} {{ s.count }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-secondary">审计时间</small>
+                        <div>{{ code_file.created_at|date:"Y-m-d H:i:s" }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 原始代码预览 -->
+        <div class="card-custom mb-4">
+            <div class="card-header">
+                <i class="bi bi-code"></i> 原始代码
+            </div>
+            <div class="card-body p-0">
+                <pre class="mb-0" style="max-height: 400px; overflow-y: auto; padding: 1rem;"><code class="language-python">{{ code_file.content }}</code></pre>
+            </div>
+        </div>
+
+        <!-- 审计问题列表 -->
+        <h5 class="mb-3" style="color: var(--text-secondary)">
+            <i class="bi bi-exclamation-triangle"></i> 审计发现（{{ records|length }} 个问题）
+        </h5>
+
+        {% for record in records %}
+        <div class="card-custom mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="badge badge-{{ record.severity }} me-2">{{ record.get_severity_display }}</span>
+                    <strong>{{ record.issue_type }}</strong>
+                    {% if record.is_fixed %}
+                        <span class="badge bg-success ms-2">已修复</span>
+                    {% else %}
+                        <span class="badge bg-secondary ms-2">待修复</span>
+                    {% endif %}
+                </div>
+                <small class="text-secondary">#{{ record.id }}</small>
+            </div>
+            <div class="card-body">
+                <p style="color: var(--text-secondary)">{{ record.description }}</p>
+
+                {% if record.original_code %}
+                <div class="mb-3">
+                    <small class="text-secondary d-block mb-1"><i class="bi bi-code"></i> 问题代码</small>
+                    <pre><code class="language-python">{{ record.original_code }}</code></pre>
+                </div>
+                {% endif %}
+
+                {% if record.suggested_fix %}
+                <div class="mb-3">
+                    <small class="text-secondary d-block mb-1"><i class="bi bi-lightbulb"></i> 修复建议</small>
+                    <pre><code class="language-python">{{ record.suggested_fix }}</code></pre>
+                </div>
+                {% endif %}
+
+                {% if record.similar_cases %}
+                <div>
+                    <small class="text-secondary d-block mb-1"><i class="bi bi-search"></i> 相似历史案例</small>
+                    {% for case in record.similar_cases %}
+                    <div class="p-2 mb-2" style="background: rgba(255,255,255,0.03); border-radius: 0.5rem; border: 1px solid var(--border-color);">
+                        <span class="badge bg-dark me-1">相似度 {{ case.similarity|floatformat:2 }}%</span>
+                        <strong>{{ case.issue_type }}</strong>
+                        <p class="mb-0 mt-1" style="font-size: 0.85rem; color: var(--text-secondary)">{{ case.description }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+
+        {% if not records %}
+        <div class="text-center py-5 text-secondary">
+            <i class="bi bi-check-circle" style="font-size: 3rem; color: var(--success)"></i>
+            <p class="mt-3">未发现任何问题，代码质量良好</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

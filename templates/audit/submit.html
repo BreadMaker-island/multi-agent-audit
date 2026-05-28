@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block title %}提交审计 - Multi-Agent 代码审计系统{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card-custom">
+            <div class="card-header">
+                <i class="bi bi-robot"></i> Multi-Agent 代码审计
+            </div>
+            <div class="card-body p-4">
+                <form id="auditForm" method="post" action="{% url 'submit' %}">
+                    {% csrf_token %}
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-5">
+                            <label class="form-label text-secondary">文件路径</label>
+                            <input type="text" name="file_path" class="form-control bg-dark text-light border-secondary"
+                                   placeholder="app.py" value="{{ file_path|default:'app.py' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-secondary">编程语言</label>
+                            <select name="language" class="form-select bg-dark text-light border-secondary">
+                                <option value="Python" selected>Python</option>
+                                <option value="JavaScript">JavaScript</option>
+                                <option value="Java">Java</option>
+                                <option value="Go">Go</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-secondary">Top-K</label>
+                            <input type="number" name="top_k" class="form-control bg-dark text-light border-secondary"
+                                   value="3" min="1" max="10">
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary-custom w-100" id="submitBtn">
+                                <i class="bi bi-play-fill"></i> 开始审计
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-secondary">
+                            粘贴代码
+                            <span class="text-muted ms-2" style="font-size:0.8rem">支持 Python / JavaScript / Java 等语言</span>
+                        </label>
+                        <textarea name="code" class="code-editor form-control" rows="15"
+                                  placeholder="# 在这里粘贴待审计的代码...&#10;&#10;import os&#10;import pickle&#10;&#10;def load_user_data(filepath):&#10;    with open(filepath, 'rb') as f:&#10;        return pickle.loads(f.read())&#10;&#10;SECRET_KEY = 'hardcoded-secret-key-12345'&#10;token = random.randint(100000, 999999)">{{ code|default:'' }}</textarea>
+                    </div>
+
+                    <!-- 快速示例 -->
+                    <div class="mb-3">
+                        <span class="text-secondary me-2" style="font-size:0.85rem">快速填入示例：</span>
+                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" onclick="fillExample('sql')">
+                            SQL注入
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" onclick="fillExample('pickle')">
+                            不安全反序列化
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" onclick="fillExample('secret')">
+                            硬编码密钥
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="fillExample('mixed')">
+                            混合问题
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if result %}
+<!-- 审计结果 -->
+<div class="row justify-content-center mt-4">
+    <div class="col-lg-10">
+        <!-- 汇总卡片 -->
+        <div class="card-custom mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-clipboard-data"></i> 审计结果</span>
+                <span class="badge bg-dark">{{ result.total_duration_sec }}s</span>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="stat-value" style="color: var(--warning); font-size:2rem">{{ result.total_issues }}</div>
+                            <div class="stat-label">发现问题</div>
+                        </div>
+                    </div>
+                    {% for agent in result.agent_details %}
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div style="font-size:0.85rem; margin-bottom:0.5rem">
+                                <span class="agent-dot {% if agent.success %}success{% else %}failed{% endif %}"></span>
+                                {{ agent.agent_name }}
+                            </div>
+                            <div class="stat-value" style="font-size:1.5rem; color: var(--primary-light)">{{ agent.issues_count }}</div>
+                            <div class="stat-label">
+                                {{ agent.duration_sec }}s
+                                {% if 'MiMo' in agent.summary or 'LLM' in agent.summary %}
+                                    <br><span class="badge bg-success mt-1" style="font-size:0.65rem">LLM</span>
+                                {% elif '规则' in agent.summary %}
+                                    <br><span class="badge bg-secondary mt-1" style="font-size:0.65rem">规则引擎</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 问题列表 -->
+        {% for issue in result.issues %}
+        <div class="card-custom mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="badge badge-{{ issue.severity }} me-2">{{ issue.severity|upper }}</span>
+                    <strong>{{ issue.issue_type }}</strong>
+                    {% if issue.line_number %}
+                        <span class="text-secondary ms-2" style="font-size:0.85rem">第 {{ issue.line_number }} 行</span>
+                    {% endif %}
+                    {% if issue.similarity_score %}
+                        <span class="badge bg-dark ms-2">相似度 {{ issue.similarity_score|floatformat:2 }}%</span>
+                    {% endif %}
+                    {% if issue.source == "llm" %}
+                        <span class="badge bg-success ms-2" style="font-size:0.7rem"><i class="bi bi-robot"></i> MiMo</span>
+                    {% elif issue.source == "rule" %}
+                        <span class="badge bg-secondary ms-2" style="font-size:0.7rem"><i class="bi bi-gear"></i> 规则</span>
+                    {% endif %}
+                </div>
+                {% if issue.cwe_id %}
+                <span class="badge bg-dark">{{ issue.cwe_id }}</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <p class="mb-3" style="color: var(--text-secondary)">{{ issue.description }}</p>
+
+                {% if issue.original_code %}
+                <div class="mb-3">
+                    <small class="text-secondary d-block mb-1"><i class="bi bi-code"></i> 原始代码</small>
+                    <pre><code class="language-python">{{ issue.original_code }}</code></pre>
+                </div>
+                {% endif %}
+
+                {% if issue.suggested_fix %}
+                <div>
+                    <small class="text-secondary d-block mb-1"><i class="bi bi-lightbulb"></i> 修复建议</small>
+                    <pre><code class="language-python">{{ issue.suggested_fix }}</code></pre>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const examples = {
+        sql: `# SQL 注入示例
+def get_user(user_id):
+    query = "SELECT * FROM users WHERE id = " + user_id
+    cursor.execute(query)
+    return cursor.fetchone()`,
+        pickle: `# 不安全反序列化示例
+import pickle
+
+def load_data(user_input):
+    data = pickle.loads(user_input)
+    return data`,
+        secret: `# 硬编码密钥示例
+import random
+
+SECRET_KEY = "my-super-secret-key-12345"
+API_TOKEN = "ghp_xxxxxxxxxxxxxxxxxxxx"
+
+def generate_token():
+    return random.randint(100000, 999999)`,
+        mixed: `# 混合问题示例
+import pickle
+import random
+
+SECRET_KEY = "hardcoded-secret-12345"
+
+def process(user_id, user_input, filepath):
+    # SQL 注入
+    query = "SELECT * FROM users WHERE id = " + user_id
+    cursor.execute(query)
+
+    # 不安全反序列化
+    data = pickle.loads(user_input)
+
+    # 不安全随机数
+    token = random.randint(100000, 999999)
+
+    # 裸 except
+    try:
+        result = risky_operation()
+    except:
+        pass
+
+    # 路径遍历
+    with open(filepath, "r") as f:
+        content = f.read()
+
+    # 异常信息泄露
+    try:
+        do_something()
+    except Exception as e:
+        return str(e)
+
+    return data`
+    };
+
+    function fillExample(type) {
+        document.querySelector('textarea[name="code"]').value = examples[type];
+    }
+
+    // 提交时显示加载状态
+    document.getElementById('auditForm').addEventListener('submit', function() {
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>正在审计...';
+    });
+</script>
+{% endblock %}

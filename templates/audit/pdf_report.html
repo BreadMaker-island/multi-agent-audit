@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 12px;
+            color: #333;
+            line-height: 1.6;
+        }
+        h1 {
+            font-size: 22px;
+            color: #1e1b4b;
+            border-bottom: 3px solid #4f46e5;
+            padding-bottom: 8px;
+            margin-bottom: 20px;
+        }
+        h2 {
+            font-size: 16px;
+            color: #4f46e5;
+            margin-top: 25px;
+            margin-bottom: 10px;
+            border-left: 4px solid #4f46e5;
+            padding-left: 10px;
+        }
+        .meta-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .meta-table td {
+            padding: 6px 12px;
+            border: 1px solid #ddd;
+        }
+        .meta-table td:first-child {
+            background: #f5f5f5;
+            font-weight: bold;
+            width: 140px;
+        }
+        .issue-box {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 15px;
+            page-break-inside: avoid;
+        }
+        .issue-header {
+            font-weight: bold;
+            font-size: 13px;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #eee;
+        }
+        .severity-critical { color: #dc2626; }
+        .severity-high { color: #ef4444; }
+        .severity-medium { color: #d97706; }
+        .severity-low { color: #2563eb; }
+        .code-block {
+            background: #f8f8f8;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 11px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin: 8px 0;
+        }
+        .fix-block {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 11px;
+            white-space: pre-wrap;
+            margin: 8px 0;
+        }
+        .footer {
+            text-align: center;
+            color: #999;
+            font-size: 10px;
+            margin-top: 30px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+        }
+        .summary-box {
+            background: #f0f0ff;
+            border: 1px solid #c7d2fe;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+        }
+        .stat-item { flex: 1; }
+        .stat-num {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4f46e5;
+        }
+        .stat-label {
+            font-size: 11px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>Code Audit Report</h1>
+
+    <table class="meta-table">
+        <tr>
+            <td>File Path</td>
+            <td>{{ code_file.file_path }}</td>
+        </tr>
+        <tr>
+            <td>Project</td>
+            <td>{{ code_file.project.name }}</td>
+        </tr>
+        <tr>
+            <td>Language</td>
+            <td>{{ code_file.language }}</td>
+        </tr>
+        <tr>
+            <td>Lines of Code</td>
+            <td>{{ code_file.line_count }}</td>
+        </tr>
+        <tr>
+            <td>Audit Time</td>
+            <td>{{ code_file.created_at|date:"Y-m-d H:i:s" }}</td>
+        </tr>
+    </table>
+
+    <div class="summary-box">
+        <div class="stats-row">
+            <div class="stat-item">
+                <div class="stat-num">{{ records|length }}</div>
+                <div class="stat-label">Issues Found</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-num">{{ critical_count }}</div>
+                <div class="stat-label">Critical</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-num">{{ high_count }}</div>
+                <div class="stat-label">High</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-num">{{ medium_count }}</div>
+                <div class="stat-label">Medium</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-num">{{ low_count }}</div>
+                <div class="stat-label">Low</div>
+            </div>
+        </div>
+    </div>
+
+    <h2>Audit Findings</h2>
+
+    {% for record in records %}
+    <div class="issue-box">
+        <div class="issue-header">
+            <span class="severity-{{ record.severity }}">[{{ record.severity|upper }}]</span>
+            {{ record.issue_type }}
+            {% if record.is_fixed %}<span style="color: green;"> [FIXED]</span>{% endif %}
+        </div>
+
+        <p><strong>Description:</strong> {{ record.description }}</p>
+
+        {% if record.original_code %}
+        <p><strong>Problem Code:</strong></p>
+        <div class="code-block">{{ record.original_code }}</div>
+        {% endif %}
+
+        {% if record.suggested_fix %}
+        <p><strong>Suggested Fix:</strong></p>
+        <div class="fix-block">{{ record.suggested_fix }}</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    {% if not records %}
+    <p style="text-align: center; color: green; font-size: 14px;">No issues found. Code quality is good.</p>
+    {% endif %}
+
+    <div class="footer">
+        Multi-Agent Code Audit &amp; Refactoring System &copy; 2026 | Generated: {% now "Y-m-d H:i:s" %}
+    </div>
+</body>
+</html>

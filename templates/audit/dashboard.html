@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}仪表盘 - Multi-Agent 代码审计系统{% endblock %}
+
+{% block content %}
+<!-- 统计卡片 -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-value" style="color: var(--primary-light)">{{ total_projects }}</div>
+            <div class="stat-label">项目总数</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-value" style="color: var(--info)">{{ total_files }}</div>
+            <div class="stat-label">代码文件</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-value" style="color: var(--warning)">{{ total_issues }}</div>
+            <div class="stat-label">发现问题</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-value" style="color: var(--success)">{{ fix_rate }}%</div>
+            <div class="stat-label">修复率</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- 严重程度分布 -->
+    <div class="col-md-4">
+        <div class="card-custom">
+            <div class="card-header">
+                <i class="bi bi-pie-chart"></i> 严重程度分布
+            </div>
+            <div class="card-body">
+                <canvas id="severityChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- 最近审计记录 -->
+    <div class="col-md-8">
+        <div class="card-custom">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-clock-history"></i> 最近审计记录</span>
+                <a href="{% url 'submit' %}" class="btn btn-sm btn-primary-custom">
+                    <i class="bi bi-plus-lg"></i> 新建审计
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-custom mb-0">
+                        <thead>
+                            <tr>
+                                <th>文件路径</th>
+                                <th>问题类型</th>
+                                <th>严重程度</th>
+                                <th>状态</th>
+                                <th>时间</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in recent_records %}
+                            <tr style="cursor: pointer;" onclick="window.location.href='{% url 'detail' record.code_file.id %}'">
+                                <td><code>{{ record.code_file.file_path }}</code></td>
+                                <td>{{ record.issue_type }}</td>
+                                <td>
+                                    <span class="badge badge-{{ record.severity }}">
+                                        {{ record.get_severity_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if record.is_fixed %}
+                                        <span class="badge bg-success">已修复</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">待修复</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-secondary">{{ record.created_at|date:"m-d H:i" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-secondary py-4">
+                                    暂无审计记录，<a href="{% url 'submit' %}">提交第一份代码</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 问题类型分布 -->
+<div class="row g-4 mt-2">
+    <div class="col-12">
+        <div class="card-custom">
+            <div class="card-header">
+                <i class="bi bi-bar-chart"></i> 问题类型 Top 10
+            </div>
+            <div class="card-body">
+                <canvas id="typeChart" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    // 严重程度分布饼图
+    const severityData = {{ severity_data|safe }};
+    new Chart(document.getElementById('severityChart'), {
+        type: 'doughnut',
+        data: {
+            labels: severityData.map(d => d.label),
+            datasets: [{
+                data: severityData.map(d => d.count),
+                backgroundColor: ['#dc2626', '#ef4444', '#f59e0b', '#3b82f6', '#6366f1'],
+                borderWidth: 0,
+                hoverOffset: 8,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#94a3b8', padding: 15, usePointStyle: true }
+                }
+            }
+        }
+    });
+
+    // 问题类型柱状图
+    const typeData = {{ type_data|safe }};
+    new Chart(document.getElementById('typeChart'), {
+        type: 'bar',
+        data: {
+            labels: typeData.map(d => d.label),
+            datasets: [{
+                label: '出现次数',
+                data: typeData.map(d => d.count),
+                backgroundColor: 'rgba(99, 102, 241, 0.6)',
+                borderColor: '#6366f1',
+                borderWidth: 1,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                y: { ticks: { color: '#94a3b8', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' } }
+            }
+        }
+    });
+</script>
+{% endblock %}
