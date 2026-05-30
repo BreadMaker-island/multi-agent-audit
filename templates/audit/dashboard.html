@@ -25,8 +25,10 @@
     </div>
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-value" style="color: var(--success)">{{ fix_rate }}%</div>
-            <div class="stat-label">修复率</div>
+            <div class="stat-value" style="color: var(--success); font-size: 1.5rem;" id="beijing-time">
+                {{ beijing_now|date:"H:i:s" }}
+            </div>
+            <div class="stat-label">北京时间</div>
         </div>
     </div>
 </div>
@@ -116,6 +118,18 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    // 北京时间实时时钟
+    function updateBeijingTime() {
+        const now = new Date();
+        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+        const beijing = new Date(utc + (8 * 3600000));
+        const timeStr = beijing.toTimeString().split(' ')[0];
+        document.getElementById('beijing-time').textContent = timeStr;
+    }
+    setInterval(updateBeijingTime, 1000);
+    updateBeijingTime();
+</script>
 <script>
     // 严重程度分布饼图
     const severityData = {{ severity_data|safe }};

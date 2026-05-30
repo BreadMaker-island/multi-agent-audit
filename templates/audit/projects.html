@@ -7,8 +7,13 @@
     <div class="col-lg-10">
         <div class="card-custom">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-folder2-open"></i> 审计项目列表</span>
-                <span class="badge bg-dark">共 {{ projects|length }} 个项目</span>
+                <span><i class="bi bi-folder2-open me-2"></i>审计项目列表</span>
+                <div>
+                    <span class="badge bg-primary me-2">共 {{ projects|length }} 个项目</span>
+                    <a href="{% url 'submit' %}" class="btn btn-sm btn-primary-custom">
+                        <i class="bi bi-plus-lg"></i> 新建审计
+                    </a>
+                </div>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -19,7 +24,7 @@
                                 <th>项目名称</th>
                                 <th>语言</th>
                                 <th>状态</th>
-                                <th>文件数</th>
+                                <th>文件</th>
                                 <th>问题数</th>
                                 <th>创建时间</th>
                             </tr>
@@ -29,12 +34,16 @@
                             <tr>
                                 <td class="text-secondary">{{ project.id }}</td>
                                 <td>
-                                    <strong>{{ project.name }}</strong>
+                                    <strong style="color: var(--primary-light)">{{ project.name }}</strong>
                                     {% if project.description %}
                                     <br><small class="text-secondary">{{ project.description|truncatewords:10 }}</small>
                                     {% endif %}
                                 </td>
-                                <td><span class="badge bg-dark">{{ project.language }}</span></td>
+                                <td>
+                                    <span class="badge" style="background: var(--primary); color: #fff;">
+                                        {{ project.language }}
+                                    </span>
+                                </td>
                                 <td>
                                     <span class="badge
                                         {% if project.status == 'completed' %}bg-success
@@ -46,27 +55,32 @@
                                 </td>
                                 <td>
                                     {% for f in project.code_files.all %}
-                                    <a href="{% url 'detail' f.id %}" class="text-decoration-none" style="color: var(--primary-light);">
-                                        <i class="bi bi-file-earmark-code"></i> {{ f.file_path }}
-                                    </a><br>
+                                    <a href="{% url 'detail' f.id %}" class="text-decoration-none d-flex align-items-center mb-1" style="color: var(--info);">
+                                        <i class="bi bi-file-earmark-code me-1"></i> {{ f.file_path }}
+                                    </a>
                                     {% empty %}
                                     <span class="text-secondary">-</span>
                                     {% endfor %}
                                 </td>
                                 <td>
                                     {% with total=project.code_files.all|length %}
-                                    <span>{{ total }}</span>
+                                    <span class="badge bg-dark" style="color: var(--warning); font-size: 0.9rem;">
+                                        {{ total }}
+                                    </span>
                                     {% endwith %}
                                 </td>
-                                <td class="text-secondary">{{ project.created_at|date:"Y-m-d H:i" }}</td>
+                                <td class="text-secondary">
+                                    <i class="bi bi-clock me-1"></i>{{ project.created_at|date:"Y-m-d H:i" }}
+                                </td>
                             </tr>
                             {% empty %}
                             <tr>
                                 <td colspan="7" class="text-center text-secondary py-5">
-                                    <i class="bi bi-inbox" style="font-size: 2rem;"></i>
-                                    <p class="mt-2">暂无项目</p>
-                                    <a href="{% url 'submit' %}" class="btn btn-sm btn-primary-custom">
-                                        <i class="bi bi-plus-lg"></i> 提交第一份代码
+                                    <i class="bi bi-inbox" style="font-size: 3rem; color: var(--primary-light);"></i>
+                                    <p class="mt-3 mb-2">暂无项目</p>
+                                    <p class="mb-3" style="font-size: 0.85rem;">提交第一份代码开始审计</p>
+                                    <a href="{% url 'submit' %}" class="btn btn-primary-custom">
+                                        <i class="bi bi-plus-lg me-1"></i> 提交代码
                                     </a>
                                 </td>
                             </tr>

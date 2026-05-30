@@ -7,7 +7,9 @@
 """
 
 import json
+from datetime import datetime
 
+import pytz
 from django.db import models
 from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
@@ -40,8 +42,10 @@ def dashboard_view(request):
     total_projects = Project.objects.count()
     total_files = CodeFile.objects.count()
     total_issues = AuditRecord.objects.count()
-    fixed_issues = AuditRecord.objects.filter(is_fixed=True).count()
-    fix_rate = round(fixed_issues / total_issues * 100, 1) if total_issues > 0 else 0
+
+    # 北京时间
+    beijing_tz = pytz.timezone('Asia/Shanghai')
+    beijing_now = datetime.now(beijing_tz)
 
     # 最近 10 条审计记录
     recent_records = AuditRecord.objects.select_related(
@@ -75,7 +79,7 @@ def dashboard_view(request):
         "total_projects": total_projects,
         "total_files": total_files,
         "total_issues": total_issues,
-        "fix_rate": fix_rate,
+        "beijing_now": beijing_now,
         "recent_records": recent_records,
         "severity_data": json.dumps(severity_data),
         "type_data": json.dumps(type_data),
@@ -95,6 +99,7 @@ def submit_view(request):
         file_path = request.POST.get("file_path", "app.py").strip()
         language = request.POST.get("language", "Python").strip()
         top_k = int(request.POST.get("top_k", 3))
+        project_name = request.POST.get("project_name", "").strip()
 
         if code:
             # 构建上下文
@@ -110,12 +115,13 @@ def submit_view(request):
             result = orchestrator.to_api_response(pipeline_result)
 
             # 保存审计结果到数据库
-            _save_audit_results(code, file_path, language, result)
+            _save_audit_results(code, file_path, language, result, project_name)
 
     return render(request, "audit/submit.html", {
         "result": result,
         "code": request.POST.get("code", "") if request.method == "POST" else "",
         "file_path": request.POST.get("file_path", "app.py") if request.method == "POST" else "app.py",
+        "project_name": request.POST.get("project_name", "") if request.method == "POST" else "",
     })
 
 
@@ -208,14 +214,18 @@ def export_pdf_view(request, file_id):
         return HttpResponse(f"PDF export error: {e}", status=500)
 
 
-def _save_audit_results(code, file_path, language, result):
+def _save_audit_results(code, file_path, language, result, project_name=""):
     """将审计结果保存到数据库"""
     try:
-        # 获取或创建默认项目
+        # 使用用户提供的项目名称，或生成默认名称
+        if not project_name:
+            project_name = f"{language} 审计 - {file_path}"
+
+        # 获取或创建项目（按名称查找，不存在则创建）
         project, _ = Project.objects.get_or_create(
-            name="Web 审计",
+            name=project_name,
             defaults={
-                "description": "通过 Web 界面提交的代码审计",
+                "description": f"文件: {file_path}",
                 "status": Project.Status.COMPLETED,
                 "language": language,
             },

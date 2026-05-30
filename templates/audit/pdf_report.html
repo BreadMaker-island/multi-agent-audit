@@ -1,24 +1,36 @@
 <!DOCTYPE html>
 <html>
+<!DOCTYPE html>
+<html>
 <head>
     <meta charset="UTF-8">
     <style>
+        /* 🚨 核心必杀：显式向 xhtml2pdf 注册服务器上的中文字体路径 */
+        @font-face {
+            font-family: "UbuntuChinese";
+            src: url("/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc");
+        }
+
         @page {
             size: A4;
             margin: 2cm;
         }
-        body {
-            font-family: Helvetica, Arial, sans-serif;
+
+        /* 🚨 将全局字体强制指定为我们注册的名字 */
+        body, div, p, span, td, th, table {
+            font-family: "UbuntuChinese", sans-serif !important;
             font-size: 12px;
             color: #333;
             line-height: 1.6;
         }
+
         h1 {
             font-size: 22px;
             color: #1e1b4b;
             border-bottom: 3px solid #4f46e5;
             padding-bottom: 8px;
             margin-bottom: 20px;
+            font-family: "UbuntuChinese", sans-serif !important;
         }
         h2 {
             font-size: 16px;
@@ -27,6 +39,7 @@
             margin-bottom: 10px;
             border-left: 4px solid #4f46e5;
             padding-left: 10px;
+            font-family: "UbuntuChinese", sans-serif !important;
         }
         .meta-table {
             width: 100%;
@@ -55,6 +68,7 @@
             margin-bottom: 8px;
             padding-bottom: 6px;
             border-bottom: 1px solid #eee;
+            font-family: "UbuntuChinese", sans-serif !important;
         }
         .severity-critical { color: #dc2626; }
         .severity-high { color: #ef4444; }
@@ -88,6 +102,7 @@
             margin-top: 30px;
             padding-top: 10px;
             border-top: 1px solid #ddd;
+            font-family: "UbuntuChinese", sans-serif !important;
         }
         .summary-box {
             background: #f0f0ff;
@@ -110,90 +125,91 @@
         .stat-label {
             font-size: 11px;
             color: #666;
+            font-family: "UbuntuChinese", sans-serif !important;
         }
     </style>
 </head>
 <body>
-    <h1>Code Audit Report</h1>
+<h1>Code Audit Report</h1>
 
-    <table class="meta-table">
-        <tr>
-            <td>File Path</td>
-            <td>{{ code_file.file_path }}</td>
-        </tr>
-        <tr>
-            <td>Project</td>
-            <td>{{ code_file.project.name }}</td>
-        </tr>
-        <tr>
-            <td>Language</td>
-            <td>{{ code_file.language }}</td>
-        </tr>
-        <tr>
-            <td>Lines of Code</td>
-            <td>{{ code_file.line_count }}</td>
-        </tr>
-        <tr>
-            <td>Audit Time</td>
-            <td>{{ code_file.created_at|date:"Y-m-d H:i:s" }}</td>
-        </tr>
-    </table>
+<table class="meta-table">
+    <tr>
+        <td>File Path</td>
+        <td>{{ code_file.file_path }}</td>
+    </tr>
+    <tr>
+        <td>Project</td>
+        <td>{{ code_file.project.name }}</td>
+    </tr>
+    <tr>
+        <td>Language</td>
+        <td>{{ code_file.language }}</td>
+    </tr>
+    <tr>
+        <td>Lines of Code</td>
+        <td>{{ code_file.line_count }}</td>
+    </tr>
+    <tr>
+        <td>Audit Time</td>
+        <td>{{ code_file.created_at|date:"Y-m-d H:i:s" }}</td>
+    </tr>
+</table>
 
-    <div class="summary-box">
-        <div class="stats-row">
-            <div class="stat-item">
-                <div class="stat-num">{{ records|length }}</div>
-                <div class="stat-label">Issues Found</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-num">{{ critical_count }}</div>
-                <div class="stat-label">Critical</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-num">{{ high_count }}</div>
-                <div class="stat-label">High</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-num">{{ medium_count }}</div>
-                <div class="stat-label">Medium</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-num">{{ low_count }}</div>
-                <div class="stat-label">Low</div>
-            </div>
+<div class="summary-box">
+    <div class="stats-row">
+        <div class="stat-item">
+            <div class="stat-num">{{ records|length }}</div>
+            <div class="stat-label">Issues Found</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-num">{{ critical_count }}</div>
+            <div class="stat-label">Critical</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-num">{{ high_count }}</div>
+            <div class="stat-label">High</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-num">{{ medium_count }}</div>
+            <div class="stat-label">Medium</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-num">{{ low_count }}</div>
+            <div class="stat-label">Low</div>
         </div>
     </div>
+</div>
 
-    <h2>Audit Findings</h2>
+<h2>Audit Findings</h2>
 
-    {% for record in records %}
-    <div class="issue-box">
-        <div class="issue-header">
-            <span class="severity-{{ record.severity }}">[{{ record.severity|upper }}]</span>
-            {{ record.issue_type }}
-            {% if record.is_fixed %}<span style="color: green;"> [FIXED]</span>{% endif %}
-        </div>
-
-        <p><strong>Description:</strong> {{ record.description }}</p>
-
-        {% if record.original_code %}
-        <p><strong>Problem Code:</strong></p>
-        <div class="code-block">{{ record.original_code }}</div>
-        {% endif %}
-
-        {% if record.suggested_fix %}
-        <p><strong>Suggested Fix:</strong></p>
-        <div class="fix-block">{{ record.suggested_fix }}</div>
-        {% endif %}
+{% for record in records %}
+<div class="issue-box">
+    <div class="issue-header">
+        <span class="severity-{{ record.severity }}">[{{ record.severity|upper }}]</span>
+        {{ record.issue_type }}
+        {% if record.is_fixed %}<span style="color: green;"> [FIXED]</span>{% endif %}
     </div>
-    {% endfor %}
 
-    {% if not records %}
-    <p style="text-align: center; color: green; font-size: 14px;">No issues found. Code quality is good.</p>
+    <p><strong>Description:</strong> {{ record.description }}</p>
+
+    {% if record.original_code %}
+    <p><strong>Problem Code:</strong></p>
+    <div class="code-block">{{ record.original_code }}</div>
     {% endif %}
 
-    <div class="footer">
-        Multi-Agent Code Audit &amp; Refactoring System &copy; 2026 | Generated: {% now "Y-m-d H:i:s" %}
-    </div>
+    {% if record.suggested_fix %}
+    <p><strong>Suggested Fix:</strong></p>
+    <div class="fix-block">{{ record.suggested_fix }}</div>
+    {% endif %}
+</div>
+{% endfor %}
+
+{% if not records %}
+<p style="text-align: center; color: green; font-size: 14px;">No issues found. Code quality is good.</p>
+{% endif %}
+
+<div class="footer">
+    Multi-Agent Code Audit &amp; Refactoring System &copy; 2026 | Generated: {% now "Y-m-d H:i:s" %}
+</div>
 </body>
 </html>
